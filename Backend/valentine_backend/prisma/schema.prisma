@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Refral {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  count           Int              @default(0)
+  ownerId         String
+  owner           User             @relation("ReferralOwner", fields: [ownerId], references: [id])
+  userfromrefrals userfromrefral[]
+}
+
+model User {
+  id              String           @id @default(cuid())
+  name            String
+  email           String           @unique
+  phoneNo         String           @unique
+  fromrefralcode  Boolean          @default(false)
+  isCampusStudent Boolean          @default(false)
+  referralCode    String?          @unique
+  referredBy      String?
+  ownedReferrals  Refral[]         @relation("ReferralOwner")
+  userfromrefrals userfromrefral[]
+}
+
+model userfromrefral {
+  id           String @id @default(cuid())
+  userId       String
+  refralcodeId String
+  refralcode   Refral @relation(fields: [refralcodeId], references: [id])
+  user         User   @relation(fields: [userId], references: [id])
+}
+
+model freeUser {
+  id      String @id @default(cuid())
+  name    String
+  email   String @unique
+  phoneNo String @unique
+}
+
+model PendingUser {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  phoneNo         String   @unique
+  createdAt       DateTime @default(now())
+  isCampusStudent Boolean  @default(false)
+  referralCode    String?
+}
