@@ -4,6 +4,7 @@ import cors from "cors";
 import referralRoutes from "./routes/referral";
 import userRoutes from "./routes/user";
 import registerRoutes from "./routes/register";
+import openUserRoutes from "./routes/openuser";
 
 import cookieParser from "cookie-parser";
 
@@ -31,6 +32,7 @@ app.use(cookieParser());
 app.use("/", referralRoutes);
 app.use("/", userRoutes);
 app.use("/", registerRoutes);
+app.use("/", openUserRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello via Bun + Express!");

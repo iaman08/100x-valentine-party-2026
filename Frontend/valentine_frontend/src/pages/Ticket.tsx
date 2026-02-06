@@ -13,6 +13,7 @@ interface TicketData {
   mobile: string;
   email: string;
   ticketId: string;
+  referralCode?: string;
 }
 
 const Ticket = () => {
@@ -131,6 +132,7 @@ const Ticket = () => {
             <ValentineTicket
               studentName={ticketData.name}
               ticketId={ticketData.ticketId}
+              referralCode={ticketData.referralCode}
             />
           </motion.div>
 
