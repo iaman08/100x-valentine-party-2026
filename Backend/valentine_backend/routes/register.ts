@@ -30,6 +30,15 @@ router.post("/register", async (req: Request, res: Response) => {
             });
         }
 
+        // Validate phone number - exactly 10 digits
+        const digitsOnly = phone.replace(/\D/g, "");
+        if (digitsOnly.length !== 10) {
+            return res.status(400).json({
+                status: "error",
+                message: "Phone number must be exactly 10 digits"
+            });
+        }
+
         // Normalize email to lowercase
         const email = rawEmail.toLowerCase().trim();
 
@@ -320,6 +329,14 @@ router.post("/open-user", async (req: Request, res: Response) => {
         if (!name || !rawEmail || !phone) {
             return res.status(400).json({
                 error: "Name, email, and phone are required"
+            });
+        }
+
+        // Validate phone number - exactly 10 digits
+        const digitsOnly = phone.replace(/\D/g, "");
+        if (digitsOnly.length !== 10) {
+            return res.status(400).json({
+                error: "Phone number must be exactly 10 digits"
             });
         }
 

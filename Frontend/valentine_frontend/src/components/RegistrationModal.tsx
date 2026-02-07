@@ -25,6 +25,7 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [userReferralCode, setUserReferralCode] = useState<string | null>(null);
+    const [formErrors, setFormErrors] = useState<{ mobile?: string; dob?: string }>({});
     const [formData, setFormData] = useState({
         name: "",
         gender: "",
@@ -77,9 +78,72 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
         }
     };
 
+    // Validate mobile number - exactly 10 digits
+    const validateMobile = (mobile: string): string | undefined => {
+        const digitsOnly = mobile.replace(/\D/g, "");
+        if (digitsOnly.length !== 10) {
+            return "Mobile number must be exactly 10 digits";
+        }
+        return undefined;
+    };
+
+    // Validate DOB - must be at least 18 years old
+    const validateDOB = (dob: string): string | undefined => {
+        if (!dob) return "Date of birth is required";
+
+        const birthDate = new Date(dob);
+        const today = new Date();
+
+        // Calculate age
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+
+        // Adjust age if birthday hasn't occurred this year
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < 18) {
+            return "You must be at least 18 years old";
+        }
+        return undefined;
+    };
+
+    // Handle mobile input - only allow digits
+    const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/\D/g, ""); // Remove non-digits
+        if (value.length <= 10) {
+            setFormData({ ...formData, mobile: value });
+            // Clear error when user starts typing
+            if (formErrors.mobile) {
+                setFormErrors({ ...formErrors, mobile: undefined });
+            }
+        }
+    };
+
+    // Handle DOB change
+    const handleDOBChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({ ...formData, dob: e.target.value });
+        // Clear error when user changes date
+        if (formErrors.dob) {
+            setFormErrors({ ...formErrors, dob: undefined });
+        }
+    };
+
     // Submit registration form to backend
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validate form fields
+        const mobileError = validateMobile(formData.mobile);
+        const dobError = validateDOB(formData.dob);
+
+        if (mobileError || dobError) {
+            setFormErrors({ mobile: mobileError, dob: dobError });
+            return;
+        }
+
+        setFormErrors({});
         setIsSubmitting(true);
         setReferralError("");
 
@@ -362,10 +426,14 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
                                                 id="dob"
                                                 type="date"
                                                 value={formData.dob}
-                                                onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                                                onChange={handleDOBChange}
                                                 required
-                                                className="bg-muted border-pink-soft focus:border-pink-hot"
+                                                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
+                                                className={`bg-muted border-pink-soft focus:border-pink-hot ${formErrors.dob ? "border-red-500" : ""}`}
                                             />
+                                            {formErrors.dob && (
+                                                <p className="text-red-500 text-xs">{formErrors.dob}</p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -374,12 +442,18 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
                                         <Input
                                             id="mobile"
                                             type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            maxLength={10}
                                             value={formData.mobile}
-                                            onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                                            placeholder="+91 98765 43210"
+                                            onChange={handleMobileChange}
+                                            placeholder="10 digit number"
                                             required
-                                            className="bg-muted border-pink-soft focus:border-pink-hot"
+                                            className={`bg-muted border-pink-soft focus:border-pink-hot ${formErrors.mobile ? "border-red-500" : ""}`}
                                         />
+                                        {formErrors.mobile && (
+                                            <p className="text-red-500 text-xs">{formErrors.mobile}</p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
