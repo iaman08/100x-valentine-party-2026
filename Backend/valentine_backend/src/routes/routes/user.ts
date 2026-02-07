@@ -36,4 +36,38 @@ router.post("/submit-user", authenticateToken, async (req, res) => {
   }
 });
 
+router.post("/check-status", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Check if user exists in User table (Approved)
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (user) {
+      return res.status(200).json({ status: "approved", user });
+    }
+
+    // Check if user exists in PendingUser table (Pending)
+    const pendingUser = await prisma.pendingUser.findUnique({
+      where: { email },
+    });
+
+    if (pendingUser) {
+      return res.status(200).json({ status: "pending" });
+    }
+
+    // Not found in either (Rejected or never registered)
+    return res.status(200).json({ status: "rejected" });
+  } catch (error) {
+    console.error("Check status error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

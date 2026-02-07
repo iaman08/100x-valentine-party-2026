@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X, ArrowLeft, Gift, UserPlus, Heart, Loader2, CheckCircle, Clock } from "lucide-react";
@@ -6,9 +6,75 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { verifyReferralCode, registerUser, generateTicketId } from "@/lib/api";
+import { verifyReferralCode, registerUser, generateTicketId, checkStatus } from "@/lib/api";
 
-type ModalStep = "choice" | "referral" | "register" | "pending" | "success";
+type ModalStep = "choice" | "referral" | "register" | "pending" | "success" | "rejected";
+
+const PendingStep = ({ slideVariants, email, onApproved, onRejected, successMessage, handleClose }: any) => {
+    useEffect(() => {
+        const interval = setInterval(async () => {
+            try {
+                const response = await checkStatus(email);
+                if (response.status === "approved") {
+                    onApproved(response.user);
+                } else if (response.status === "rejected") {
+                    onRejected();
+                }
+            } catch (error) {
+                console.error("Polling error:", error);
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [email, onApproved, onRejected]);
+
+    return (
+        <motion.div
+            key="pending"
+            custom={1}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="space-y-6"
+        >
+            <div className="text-center space-y-2">
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring" }}
+                    className="w-16 h-16 mx-auto rounded-full bg-yellow-100 flex items-center justify-center"
+                >
+                    <Clock className="w-8 h-8 text-yellow-600" />
+                </motion.div>
+                <h2 className="font-display text-2xl text-foreground">Pending Approval</h2>
+                <p className="text-muted-foreground text-sm">{successMessage}</p>
+            </div>
+
+            <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+                <p className="text-sm text-center text-muted-foreground">
+                    Your registration has been submitted! 🎉
+                </p>
+                <p className="text-sm text-center text-muted-foreground">
+                    An admin will review your request shortly. You'll receive an email once approved.
+                </p>
+                <div className="flex justify-center pt-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-pink-hot" />
+                </div>
+            </div>
+
+            <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleClose}
+                className="w-full p-4 rounded-xl bg-gradient-to-r from-pink-hot to-coral text-white font-semibold shadow-cute hover:shadow-lg transition-shadow"
+            >
+                Got it! 👍
+            </motion.button>
+        </motion.div>
+    );
+};
 
 interface RegistrationModalProps {
     isOpen: boolean;
@@ -504,8 +570,34 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
 
                         {/* Step 3: Pending Approval */}
                         {step === "pending" && (
+                            <PendingStep
+                                slideVariants={slideVariants}
+                                email={formData.email}
+                                onApproved={(user) => {
+                                    if (user.referralCode) {
+                                        setUserReferralCode(user.referralCode);
+                                    }
+                                    const ticketData = {
+                                        ...formData,
+                                        ticketId: generateTicketId(),
+                                        referralCode: user.referralCode,
+                                    };
+                                    onClose();
+                                    navigate("/ticket", { state: ticketData });
+                                }}
+                                onRejected={() => {
+                                    setSuccessMessage("Your registration request was declined.");
+                                    setStep("rejected");
+                                }}
+                                successMessage={successMessage}
+                                handleClose={handleClose}
+                            />
+                        )}
+
+                        {/* Step 4: Rejected */}
+                        {step === "rejected" && (
                             <motion.div
-                                key="pending"
+                                key="rejected"
                                 custom={1}
                                 variants={slideVariants}
                                 initial="enter"
@@ -519,30 +611,21 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
                                         transition={{ delay: 0.2, type: "spring" }}
-                                        className="w-16 h-16 mx-auto rounded-full bg-yellow-100 flex items-center justify-center"
+                                        className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center"
                                     >
-                                        <Clock className="w-8 h-8 text-yellow-600" />
+                                        <X className="w-8 h-8 text-red-600" />
                                     </motion.div>
-                                    <h2 className="font-display text-2xl text-foreground">Pending Approval</h2>
-                                    <p className="text-muted-foreground text-sm">{successMessage}</p>
-                                </div>
-
-                                <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-                                    <p className="text-sm text-center text-muted-foreground">
-                                        Your registration has been submitted! 🎉
-                                    </p>
-                                    <p className="text-sm text-center text-muted-foreground">
-                                        An admin will review your request shortly. You'll receive an email once approved.
-                                    </p>
+                                    <h2 className="font-display text-2xl text-foreground">Request Declined</h2>
+                                    <p className="text-muted-foreground text-sm">We're sorry, but we couldn't approve your registration.</p>
                                 </div>
 
                                 <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={handleClose}
-                                    className="w-full p-4 rounded-xl bg-gradient-to-r from-pink-hot to-coral text-white font-semibold shadow-cute hover:shadow-lg transition-shadow"
+                                    className="w-full p-4 rounded-xl bg-muted text-foreground font-semibold hover:bg-muted/80 transition-colors"
                                 >
-                                    Got it! 👍
+                                    Close
                                 </motion.button>
                             </motion.div>
                         )}

@@ -6,41 +6,163 @@ datasource db {
   provider = "postgresql"
 }
 
-model Refral {
-  id              String           @id @default(cuid())
-  code            String           @unique
-  count           Int              @default(0)
-  ownerId         String
-  owner           User             @relation("ReferralOwner", fields: [ownerId], references: [id])
-  userfromrefrals userfromrefral[]
+enum Role {
+  USER
+  ADMIN
+  ORGANIZER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+}
+
+enum EventVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum TicketStatus {
+  CONFIRMED
+  CANCELLED
+  CHECKED_IN
+  WAITLIST
+  EXPIRED
 }
 
 model User {
-  id              String           @id @default(cuid())
+  id              String    @id @default(cuid())
   name            String
-  email           String           @unique
-  phoneNo         String           @unique
-  fromrefralcode  Boolean          @default(false)
-  isCampusStudent Boolean          @default(false)
-  referralCode    String?          @unique
+  email           String    @unique
+  phoneNo         String    @unique
+  password        String?
+  role            Role      @default(USER)
+  
+  // Profile / Legacy
+  isCampusStudent Boolean   @default(false)
+  referralCode    String?   @unique
   referredBy      String?
-  ownedReferrals  Refral[]         @relation("ReferralOwner")
-  userfromrefrals userfromrefral[]
+  fromrefralcode  Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt @default(now())
+  deletedAt       DateTime? // Soft delete
+
+  // Relations
+  ownedReferrals    Referral[]        @relation("ReferralOwner")
+  userFromReferrals UserFromReferral[]
+  tickets           Ticket[]
+  waitlistEntries   WaitlistEntry[]
+  organizedEvents   Event[]           @relation("EventOrganizer")
+
+  @@index([email])
+  @@index([phoneNo])
 }
 
-model userfromrefral {
-  id           String @id @default(cuid())
-  userId       String
-  refralcodeId String
-  refralcode   Refral @relation(fields: [refralcodeId], references: [id])
-  user         User   @relation(fields: [userId], references: [id])
+model Event {
+  id          String          @id @default(cuid())
+  title       String
+  description String
+  date        DateTime
+  location    String
+  capacity    Int
+  bookedCount Int             @default(0)
+  price       Float           @default(0)
+  imageUrl    String?
+  
+  status      EventStatus     @default(PUBLISHED)
+  visibility  EventVisibility @default(PUBLIC)
+  
+  organizerId String?
+  organizer   User?           @relation("EventOrganizer", fields: [organizerId], references: [id])
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  tickets     Ticket[]
+  waitlist    WaitlistEntry[]
+
+  @@index([date, status])
+  @@index([organizerId])
 }
 
-model freeUser {
+model Ticket {
+  id        String       @id @default(cuid())
+  userId    String
+  eventId   String
+  status    TicketStatus @default(CONFIRMED)
+  qrCode    String?      @unique
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([userId, eventId]) // One ticket per user per event
+  @@index([eventId, status])
+  @@index([userId])
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  position  Int      @default(0) // Logic to handle ordering
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@index([eventId, createdAt]) // FIFO
+}
+
+model Referral {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  count     Int      @default(0)
+  usageLimit Int?    // Optional limit
+  expiresAt DateTime?
+  
+  ownerId   String
+  owner     User     @relation("ReferralOwner", fields: [ownerId], references: [id])
+  
+  userFromReferrals UserFromReferral[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@map("Refral")
+}
+
+model UserFromReferral {
+  id         String    @id @default(cuid())
+  userId     String
+  referralId String?
+  
+  referral   Referral? @relation(fields: [referralId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+  
+  createdAt  DateTime  @default(now())
+
+  @@map("userfromrefral")
+  @@index([userId])
+  @@index([referralId])
+}
+
+// Legacy models kept for safety
+model FreeUser {
   id      String @id @default(cuid())
   name    String
   email   String @unique
   phoneNo String @unique
+  @@map("freeUser")
 }
 
 model PendingUser {

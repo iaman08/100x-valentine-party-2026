@@ -109,3 +109,23 @@ export function generateTicketId(): string {
     }
     return result;
 }
+
+/**
+ * Check the approval status of a user
+ * @param email - User's email address
+ */
+export async function checkStatus(email: string): Promise<{ status: "approved" | "pending" | "rejected", user?: any }> {
+    const response = await fetch(`${API_BASE_URL}/check-status`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to check status");
+    }
+
+    return response.json();
+}
