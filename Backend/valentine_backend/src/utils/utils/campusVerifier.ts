@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import { join } from "path";
-import prisma from "../db";
+import prisma from "../../db";
 
 // Load campus emails from student.txt
 let campusEmails: Set<string> | null = null;
@@ -49,7 +49,7 @@ export async function generateReferralCode(): Promise<string> {
         }
 
         // Check if code already exists in database
-        const existing = await prisma.refral.findUnique({
+        const existing = await prisma.referral.findUnique({
             where: { code },
         });
 
@@ -74,7 +74,7 @@ export async function createUniqueReferralCode(userId: string): Promise<string> 
         const code = await generateReferralCode();
 
         // Check if code already exists
-        const existing = await prisma.refral.findUnique({
+        const existing = await prisma.referral.findUnique({
             where: { code },
         });
 
@@ -97,7 +97,7 @@ export async function createUniqueReferralCode(userId: string): Promise<string> 
  */
 export async function validateReferralCode(code: string) {
     try {
-        const referral = await prisma.refral.findUnique({
+        const referral = await prisma.referral.findUnique({
             where: { code: code.toUpperCase() },
         });
 
@@ -122,7 +122,7 @@ export async function validateReferralCode(code: string) {
  */
 export async function incrementReferralUsage(code: string): Promise<boolean> {
     try {
-        await prisma.refral.update({
+        await prisma.referral.update({
             where: { code: code.toUpperCase() },
             data: {
                 count: {
@@ -144,10 +144,10 @@ export async function createUserReferralTracking(
     userId: string,
     referralCodeId: string
 ): Promise<void> {
-    await prisma.userfromrefral.create({
+    await prisma.userFromReferral.create({
         data: {
             userId,
-            refralcodeId: referralCodeId,
+            referralId: referralCodeId,
         },
     });
 }

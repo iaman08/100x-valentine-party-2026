@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from "express";
-import { sendTelegramMessage } from "../utils/telegram";
-import { sendTicketEmail } from "../utils/email";
-import { appendToGoogleSheet } from "../utils/googleSheets";
-import { isCampusEmail, generateReferralCode } from "../utils/campusVerifier";
-import prisma from "../db";
+import { sendTelegramMessage } from "../../utils/utils/telegram";
+import { sendTicketEmail } from "../../utils/utils/email";
+import { appendToGoogleSheet } from "../../utils/utils/googleSheets";
+import { isCampusEmail, generateReferralCode } from "../../utils/utils/campusVerifier";
+import prisma from "../../db";
 
 const router = Router();
 
@@ -52,7 +52,7 @@ router.post("/register", async (req: Request, res: Response) => {
         if (referralCode && !isStudent) {
 
             // Find the referral code with owner info for self-referral check
-            const referral = await prisma.refral.findUnique({
+            const referral = await prisma.referral.findUnique({
                 where: { code: referralCode.toUpperCase() },
                 include: { owner: true },
             });
@@ -116,7 +116,7 @@ router.post("/register", async (req: Request, res: Response) => {
             // Use transaction to ensure atomic referral increment
             const newUser = await prisma.$transaction(async (tx) => {
                 // Increment referral usage atomically
-                await tx.refral.update({
+                await tx.referral.update({
                     where: { code: referralCode.toUpperCase() },
                     data: { count: { increment: 1 } },
                 });
@@ -222,7 +222,7 @@ router.post("/register", async (req: Request, res: Response) => {
             });
 
             // Create the referral record
-            await prisma.refral.create({
+            await prisma.referral.create({
                 data: {
                     code: newReferralCode,
                     ownerId: newUser.id,
@@ -377,7 +377,7 @@ router.post("/open-user", async (req: Request, res: Response) => {
                 },
             });
 
-            await prisma.refral.create({
+            await prisma.referral.create({
                 data: {
                     code: newReferralCode,
                     ownerId: newUser.id,
@@ -402,7 +402,7 @@ router.post("/open-user", async (req: Request, res: Response) => {
 
         // Handle referral code
         if (referralCode) {
-            const referral = await prisma.refral.findUnique({
+            const referral = await prisma.referral.findUnique({
                 where: { code: referralCode.toUpperCase() },
                 include: { owner: true },
             });
@@ -420,7 +420,7 @@ router.post("/open-user", async (req: Request, res: Response) => {
             }
 
             const newUser = await prisma.$transaction(async (tx) => {
-                await tx.refral.update({
+                await tx.referral.update({
                     where: { code: referralCode.toUpperCase() },
                     data: { count: { increment: 1 } },
                 });

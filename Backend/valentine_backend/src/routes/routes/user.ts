@@ -1,7 +1,7 @@
 import { Router } from "express";
-import prisma from "../db";
-import { sendTicketEmail } from "../utils/email";
-import { authenticateToken } from "../middleware/auth";
+import prisma from "../../db";
+import { sendTicketEmail } from "../../utils/utils/email";
+import { authenticateToken } from "../../middleware/middleware/auth";
 
 const router = Router();
 router.post("/submit-user", authenticateToken, async (req, res) => {

@@ -1,7 +1,7 @@
 
 import { Router } from "express";
-import prisma from "../db";
-import { generateToken } from "../middleware/auth";
+import prisma from "../../db";
+import { generateToken } from "../../middleware/middleware/auth";
 
 const router = Router();
 
@@ -14,7 +14,7 @@ router.post("/verify-referral", async (req, res) => {
             return;
         }
 
-        const referral = await prisma.refral.findUnique({
+        const referral = await prisma.referral.findUnique({
             where: { code: code.toUpperCase() },
         });
 

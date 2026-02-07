@@ -1,8 +1,8 @@
 import { Router, type Request, type Response } from "express";
-import { sendTicketEmail } from "../utils/email";
-import { appendToGoogleSheet } from "../utils/googleSheets";
-import { createUniqueReferralCode } from "../utils/campusVerifier";
-import prisma from "../db";
+import { sendTicketEmail } from "../../utils/utils/email";
+import { appendToGoogleSheet } from "../../utils/utils/googleSheets";
+import { createUniqueReferralCode } from "../../utils/utils/campusVerifier";
+import prisma from "../../db";
 
 const router = Router();
 
